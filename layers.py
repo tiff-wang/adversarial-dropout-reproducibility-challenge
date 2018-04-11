@@ -35,7 +35,8 @@ def MaxPooling(x, ksize=2, stride_length=2, padding='SAME', data_format='NHWC'):
 
 
 def GlobalAveragePooling(x):
-    return tf.reduce_mean(x, [1, 2])
+    x = tf.reduce_mean(x, [1, 2])
+    return x
 
 
 def Dense(x, input_dim, output_dim, seed=None, name='dense'):
@@ -62,6 +63,11 @@ def Dropout(x, probability=0.5):
 def GaussianNoise(x, sigma=0.15):
     noise = tf.random_normal(shape=tf.shape(x), stddev=sigma)
     x += noise
+    return x
+
+
+def SoftMax(x):
+    x = tf.nn.softmax(x)
     return x
 
 
