@@ -71,6 +71,18 @@ def SoftMax(x):
     return x
 
 
+def CrossEntropyWithLogits(logits, labels):
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
+    return loss
+
+
+# Formula: sum(p_i * log(p_i) - p_i * log(q_i))
+def KLDivergenceWithLoigts(p, q):
+    p_soft = SoftMax(p)
+    distance = tf.reduce_sum(p_soft * tf.nn.log_softmax(p) - p_soft * tf.nn.log_softmax(q))
+    return distance
+
+
 if __name__=='__main__':
     x = tf.constant(np.repeat([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]], 16, axis=0), tf.float32)
     reshape = tf.reshape(x, [1, 16, 16, 1])
