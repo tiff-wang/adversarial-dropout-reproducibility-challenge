@@ -6,7 +6,9 @@ import re
 from keras.datasets import cifar10
 from keras.utils import to_categorical
 from keras.datasets import mnist
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("TkAGG")
+from matplotlib import pyplot as plt
 
 '''
 Returns a model without adversarial dropout
@@ -88,25 +90,35 @@ def Accuracy(logits, labels):
     accuracy = tf.reduce_mean(tf.cast(equality, tf.float32))
     return accuracy
 
-def visualize(acc, loss, steps, params):
-    x = np.arange(0, len(acc) * steps, steps)
-    name = "Baseline" if params['baseline'] else "Adversarial"
+
+def visualize(acc, loss, param):
+
+    x = np.arange(0, len(acc) * param['STEPS'], param['STEPS'])
+    name = "Baseline" if param['baseline'] else "Adversarial"
     plt.figure(1)
     plt.title("Accuracy trend: " + name)
     plt.plot(x, acc)
+
+    plt.savefig("Accuracy_" + re.sub("{|}|:|'|,| ", "", param) + ".png")
 
     plt.figure(2)
     plt.title("Loss trend: " + name)
     plt.plot(x, loss)
 
-    plt.savefig("")
+    plt.savefig("Loss_" + re.sub("{|}|:|'|,| ", "", param) + ".png")
 
 
-
-def doTraining(x_train, y_train, x_test, y_test, batch_size=128, steps=None, epochs=10, baseline=False):
+def doTraining(x_train, y_train, x_test, y_test, param):
     # Training setup
-    STEPS = len(x_train) // batch_size if steps is None else steps
-    TEST_STEPS = len(x_test) // batch_size if steps is None else steps
+
+    batch_size = param['BATCH_SIZE']
+    epochs = param['EPOCHS']
+
+    param_train = param
+    param_test = param
+
+    STEPS = len(x_train) // batch_size if param['STEPS'] is None else param['STEPS']
+    TEST_STEPS = len(x_test) // batch_size if param['STEPS'] is None else param['STEPS']
 
     # Graph
     x_train_ph = tf.placeholder(tf.float32)
@@ -114,7 +126,7 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, steps=None, epo
     y_train_ph = tf.placeholder(tf.float32)
     y_test_ph = tf.placeholder(tf.float32)
 
-    train_op, loss, logit_rand = CreateBaseModel(x_train_ph, y_train_ph) if baseline else CreateAdDModel(x_train_ph, y_train_ph)
+    train_op, loss, logit_rand = CreateBaseModel(x_train_ph, y_train_ph) if param['BASELINE'] else CreateAdDModel(x_train_ph, y_train_ph)
     logit_test, test_loss = createTestModel(x_test_ph, y_test_ph)
 
     # Accuracy Train
@@ -123,8 +135,10 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, steps=None, epo
     # Accuracy Test
     accuracy_test = Accuracy(logit_test, y_test_ph)
 
-    acc_trend = []
-    loss_trend = []
+    acc_train_trend = []
+    loss_train_trend = []
+    acc_test_trend = []
+    loss_test_trend = []
 
     # Training
     with tf.Session() as sess:
@@ -134,10 +148,13 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, steps=None, epo
             # Train model
             acc_train, loss_train = 0, 0
             for i in range(STEPS):
-                _, l, acc = sess.run([train_op, loss, accuracy_train], feed_dict={x_train_ph: x_train[batch_size * i : batch_size * (i + 1)], y_train_ph: y_train[batch_size * i : batch_size * (i + 1)]})
+                _, loss, acc = sess.run([train_op, loss, accuracy_train], feed_dict={x_train_ph: x_train[batch_size * i : batch_size * (i + 1)], y_train_ph: y_train[batch_size * i : batch_size * (i + 1)]})
                 acc_train += acc
-                loss_train += l
-            
+                loss_train += loss
+
+                acc_train_trend.append(acc)
+                loss_train_trend.append(loss)
+
             # Test model
             acc_test, loss_test = 0, 0
             for i in range(TEST_STEPS):
@@ -145,19 +162,21 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, steps=None, epo
                 acc_test += acc_t
                 loss_test += loss_t
 
-                acc_trend.append(acc_t)
-                loss_trend.append(loss_t)
+                acc_test_trend.append(acc_t)
+                loss_test_trend.append(loss_t)
 
+    # Train
+    param_train['TYPE'] = 'train'
+    param_train['STEPS'] = STEPS
+    visualize(acc_train_trend, loss_train_trend, param_train)
 
-    params = {
-        batch_size: batch_size,
-        steps: steps,
-        epochs: epochs,
-        baseline: baseline
-    }
+    # Test
+    param_test['TYPE'] = 'test'
+    param_test['STEPS'] = TEST_STEPS
+    visualize(acc_test_trend, loss_test_trend, param_test)
 
-    visualize(acc_trend, loss_trend, steps, params)
-    return acc_trend, loss_trend
+    return acc_train_trend, loss_train_trend, acc_test_trend, loss_test_trend
+
 
 if __name__=='__main__':
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
@@ -168,8 +187,12 @@ if __name__=='__main__':
     y_train = to_categorical(y_train)
     y_test = to_categorical(y_test)
 
-    BATCH_SIZE = 128
-    EPOCHS = 15
-    doTraining(x_train, y_train, x_test, y_test, BATCH_SIZE, EPOCHS, False)
+    param = {
+        'BATCH_SIZE': 128,
+        'EPOCHS': 1,
+        'STEPS': None,
+        'BASELINE': False
+    }
+    doTraining(x_train, y_train, x_test, y_test, param)
 
 
