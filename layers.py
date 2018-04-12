@@ -73,7 +73,7 @@ def SoftMax(x):
 
 
 '''
-Loss functions. Arg1: Approximation, Arg2: Labels
+Loss functions. Arg 1: Approximation, Arg 2: Labels
 '''
 def CrossEntropyWithLogits(logits, labels):
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
