@@ -2,6 +2,8 @@ import tensorflow as tf
 import layers as L
 from buildingblocks import *
 import numpy as np
+from keras.datasets import cifar10
+from keras.utils import to_categorical
 
 
 '''
@@ -58,15 +60,25 @@ def CreateAdDModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer, 
 
 
 if __name__=='__main__':
-    x = tf.constant(np.repeat([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], [1, 2, 1, 3, 5, 7, 8, 5, 1, 2, 3, 4, 5, 6, 7, 8]], 16, axis=0), tf.float32)
-    x_reshaped = tf.cast(tf.reshape(x, [2, 16, 16, 1]), tf.float32)
-    y = tf.cast(tf.constant(np.array([[0, 1, 0, 0, 0, 0, 0, 0, 0, 0], [0,0,0,0,1,0,0,0,0,0]])), tf.float32)
-    train_op, loss = CreateAdDModel(x_reshaped, y)
+
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
+
+    x = tf.placeholder(tf.float32)
+    x_gray = tf.image.rgb_to_grayscale(x)
+    y = tf.placeholder(tf.float32)
+
+
+
+    # x = tf.constant(np.repeat([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], [1, 2, 1, 3, 5, 7, 8, 5, 1, 2, 3, 4, 5, 6, 7, 8]], 16, axis=0), tf.float32)
+    # x_reshaped = tf.cast(tf.reshape(x, [2, 16, 16, 1]), tf.float32)
+    # y = tf.cast(tf.constant(np.array([[0, 1, 0, 0, 0, 0, 0, 0, 0, 0], [0,0,0,0,1,0,0,0,0,0]])), tf.float32)
+    train_op, loss = CreateAdDModel(x_gray, y)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        for _ in range(20):
-            w, l = sess.run([train_op, loss])
-            print(np.array(l))
-
+        for epoch in range(10):
+            w, l = sess.run([train_op, loss], feed_dict={x: x_train, y: y_train})
+            print(l)
 
