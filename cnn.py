@@ -37,7 +37,7 @@ def modelWithAdD(x, y, fn_loss=L.KLDivergenceWithLogits):
 
 
 
-def CreateBaseModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer, momentum=0.5, lmb=0.01):
+def CreateBaseModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer, momentum=0.999):
     logit_rand = modelWithRandD(x)
     loss = L.CrossEntropyWithLogits(logit_rand, y)
 
@@ -51,7 +51,7 @@ def CreateBaseModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer,
 '''
 Create the AdD model for training
 '''
-def CreateAdDModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer, momentum=0.5, lmb=0.01):
+def CreateAdDModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer, momentum=0.999, lmb=0.01):
     logit_rand = modelWithRandD(x)
     logit_rand_loss = L.CrossEntropyWithLogits(logit_rand, y)
 
@@ -94,15 +94,11 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, epochs=10, base
 
     # Graph
     x_train_ph = tf.placeholder(tf.float32)
-    # x_train_gray = tf.image.rgb_to_grayscale(x_train_ph)
     x_test_ph = tf.placeholder(tf.float32)
-    # x_test_gray = tf.image.rgb_to_grayscale(x_test_ph)
-    # x_gray = tf.image.rgb_to_grayscale(x)
     y_train_ph = tf.placeholder(tf.float32)
     y_test_ph = tf.placeholder(tf.float32)
 
     train_op, loss, logit_rand = CreateBaseModel(x_train_ph, y_train_ph) if baseline else CreateAdDModel(x_train_ph, y_train_ph)
-    # with tf.device('/cpu:0'):
     logit_test, test_loss = createTestModel(x_test_ph, y_test_ph)
 
     # Accuracy Train
@@ -114,28 +110,37 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, epochs=10, base
     # Training
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
+        
         for epoch in range(epochs):
+            # Train model
+            acc_train, loss_train = 0, 0
             for i in range(STEPS):
-                w, l, acc = sess.run([train_op, loss, accuracy_train], feed_dict={x_train_ph: x_train[batch_size * i : batch_size * (i + 1)], y_train_ph: y_train[batch_size * i : batch_size * (i + 1)]})
+                _, l, acc = sess.run([train_op, loss, accuracy_train], feed_dict={x_train_ph: x_train[batch_size * i : batch_size * (i + 1)], y_train_ph: y_train[batch_size * i : batch_size * (i + 1)]})
+                acc_train += acc
+                loss_train += l
+            
+            # Test model
             acc_test, loss_test = 0, 0
             for i in range(TEST_STEPS):
                 acc_t, loss_t = sess.run([accuracy_test, test_loss], feed_dict={x_test_ph: x_test[batch_size * i : batch_size * (i + 1)], y_test_ph: y_test[batch_size * i : batch_size * (i + 1)]})
                 acc_test += acc_t
                 loss_test += loss_t
 
-            print('Epoch: {} Test Loss: {}, Test Accuracy: {}'.format(epoch, loss_test / TEST_STEPS, acc_test / TEST_STEPS))
+            print('Epoch: {} || Train Loss: {}, Train Acc: {} || Test Loss: {}, Test Accuracy: {}'.format(epoch, loss_train / STEPS, acc_train / STEPS, loss_test / TEST_STEPS, acc_test / TEST_STEPS))
+
 
 
 if __name__=='__main__':
-    # Load and process data
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    print(x_train.shape, x_test.shape)
-    # y_train = to_categorical(y_train)
-    # y_test = to_categorical(y_test)
-    # x_train = np.reshape(x_train, [-1, 28, 28, 1])
-    # x_test = np.reshape(x_test, [-1, 28, 28, 1])
-    # BATCH_SIZE = 256
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    with tf.Session() as sess:
+        x_train = sess.run(tf.image.rgb_to_grayscale(x_train))
+        x_test = sess.run(tf.image.rgb_to_grayscale(x_test))
+    
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
 
-    # doTraining(x_train, y_train, x_test, y_test, BATCH_SIZE, 5, False)
+    BATCH_SIZE = 128
+    EPOCHS = 15
+    doTraining(x_train, y_train, x_test, y_test, BATCH_SIZE, EPOCHS, False)
 
 
