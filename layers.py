@@ -83,7 +83,10 @@ def CrossEntropyWithLogits(logits, labels):
 # Formula: sum(p_i * log(p_i) - p_i * log(q_i))
 def KLDivergenceWithLogits(q, p):
     p_soft = SoftMax(p)
-    distance = tf.reduce_sum(p_soft * tf.nn.log_softmax(p) - p_soft * tf.nn.log_softmax(q))
+    plogp = tf.reduce_mean(tf.reduce_sum(p_soft * tf.nn.log_softmax(p), 1))
+    plogq = tf.reduce_mean(tf.reduce_sum(p_soft * tf.nn.log_softmax(q), 1))
+    # distance = tf.reduce_sum(p_soft * tf.nn.log_softmax(p) - p_soft * tf.nn.log_softmax(q))
+    distance = plogp - plogq
     return distance
 
 
