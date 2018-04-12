@@ -35,7 +35,8 @@ def MaxPooling(x, ksize=2, stride_length=2, padding='SAME', data_format='NHWC'):
 
 
 def GlobalAveragePooling(x):
-    return tf.reduce_mean(x, [1, 2])
+    x = tf.reduce_mean(x, [1, 2])
+    return x
 
 
 def Dense(x, input_dim, output_dim, seed=None, name='dense'):
@@ -65,6 +66,30 @@ def GaussianNoise(x, sigma=0.15):
     return x
 
 
+def SoftMax(x):
+    x = tf.nn.softmax(x)
+    return x
+
+
+
+'''
+Loss functions. Arg 1: Approximation, Arg 2: Labels
+'''
+def CrossEntropyWithLogits(logits, labels):
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels))
+    return loss
+
+
+# Formula: sum(p_i * log(p_i) - p_i * log(q_i))
+def KLDivergenceWithLogits(q, p):
+    p_soft = SoftMax(p)
+    plogp = tf.reduce_mean(tf.reduce_sum(p_soft * tf.nn.log_softmax(p), 1))
+    plogq = tf.reduce_mean(tf.reduce_sum(p_soft * tf.nn.log_softmax(q), 1))
+    # distance = tf.reduce_sum(p_soft * tf.nn.log_softmax(p) - p_soft * tf.nn.log_softmax(q))
+    distance = plogp - plogq
+    return distance
+
+
 if __name__=='__main__':
     x = tf.constant(np.repeat([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]], 16, axis=0), tf.float32)
     reshape = tf.reshape(x, [1, 16, 16, 1])
@@ -76,7 +101,3 @@ if __name__=='__main__':
         result = sess.run(h1)
         print(result)
         print(result.shape)
-
-
-
-

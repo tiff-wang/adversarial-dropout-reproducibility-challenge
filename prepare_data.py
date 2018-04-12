@@ -9,8 +9,8 @@ import numpy as np
 from scipy import linalg
 import tensorflow as tf
 
-REMOTE_URL = 'http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
-LOCAL_DIR = '/home/nabillionaire/Desktop/data'
+REMOTE_URL = r'http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
+LOCAL_DIR = r'/home/nabillionaire/Documents/Repositories/adversarial-dropout-project/data'
 
 NUM_CLASSES = 10
 TRAIN_EXAMPLES = 50000
