@@ -2,9 +2,11 @@ import tensorflow as tf
 import layers as L
 from buildingblocks import *
 import numpy as np
+import re
 from keras.datasets import cifar10
 from keras.utils import to_categorical
 from keras.datasets import mnist
+import matplotlib.pyplot as plt
 
 '''
 Returns a model without adversarial dropout
@@ -86,11 +88,25 @@ def Accuracy(logits, labels):
     accuracy = tf.reduce_mean(tf.cast(equality, tf.float32))
     return accuracy
 
+def visualize(acc, loss, steps, params):
+    x = np.arange(0, len(acc) * steps, steps)
+    name = "Baseline" if params['baseline'] else "Adversarial"
+    plt.figure(1)
+    plt.title("Accuracy trend: " + name)
+    plt.plot(x, acc)
 
-def doTraining(x_train, y_train, x_test, y_test, batch_size=128, epochs=10, baseline=False):
+    plt.figure(2)
+    plt.title("Loss trend: " + name)
+    plt.plot(x, loss)
+
+    plt.savefig("")
+
+
+
+def doTraining(x_train, y_train, x_test, y_test, batch_size=128, steps=None, epochs=10, baseline=False):
     # Training setup
-    STEPS = len(x_train) // batch_size
-    TEST_STEPS = len(x_test) // batch_size
+    STEPS = len(x_train) // batch_size if steps is None else steps
+    TEST_STEPS = len(x_test) // batch_size if steps is None else steps
 
     # Graph
     x_train_ph = tf.placeholder(tf.float32)
@@ -111,6 +127,9 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, epochs=10, base
     # Accuracy Test
     accuracy_test = Accuracy(logit_test, y_test_ph)
 
+    acc_trend = []
+    loss_trend = []
+
     # Training
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -123,19 +142,31 @@ def doTraining(x_train, y_train, x_test, y_test, batch_size=128, epochs=10, base
                 acc_test += acc_t
                 loss_test += loss_t
 
+                acc_trend.append(acc_t)
+                loss_trend.append(loss_t)
+
             print('Epoch: {} Test Loss: {}, Test Accuracy: {}'.format(epoch, loss_test / TEST_STEPS, acc_test / TEST_STEPS))
 
+    params = {
+        batch_size: batch_size,
+        steps: steps,
+        epochs: epochs,
+        baseline: baseline
+    }
+
+    visualize(acc_trend, loss_trend, steps, params)
+    return acc_trend, loss_trend
 
 if __name__=='__main__':
     # Load and process data
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     print(x_train.shape, x_test.shape)
-    # y_train = to_categorical(y_train)
-    # y_test = to_categorical(y_test)
-    # x_train = np.reshape(x_train, [-1, 28, 28, 1])
-    # x_test = np.reshape(x_test, [-1, 28, 28, 1])
-    # BATCH_SIZE = 256
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
+    x_train = np.reshape(x_train, [-1, 28, 28, 1])
+    x_test = np.reshape(x_test, [-1, 28, 28, 1])
+    BATCH_SIZE = 256
 
-    # doTraining(x_train, y_train, x_test, y_test, BATCH_SIZE, 5, False)
+    acc_trend, loss_trend = doTraining(x_train, y_train, x_test, y_test, batch_size=64, epochs=5, baseline=False)
 
 
