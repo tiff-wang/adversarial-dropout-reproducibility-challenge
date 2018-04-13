@@ -10,6 +10,22 @@ import matplotlib
 matplotlib.use("TkAGG")
 from matplotlib import pyplot as plt
 
+''' Preprocesses the data '''
+def preprocess(data):
+    # Mean normalization
+    data = (data - 127.5) / 255.
+    # Find principal component
+    shape = data.shape
+    data = data.transpose(0, 2, 3, 1)
+    flatx = np.reshape(data, (data.shape[0], data.shape[1] * data.shape[2] * data.shape[3]))
+    sigma = np.dot(flatx.T, flatx) / flatx.shape[1]
+    U, S, V = np.linalg.svd(sigma)
+    pc = np.dot(np.dot(U, np.diag(1. / np.sqrt(S + 0.0001))), U.T)
+    # Apply ZCA whitening
+    whitex = np.dot(flatx, pc)
+    data = np.reshape(whitex, (shape[0], shape[1], shape[2], shape[3]))
+    return data
+
 '''
 Uncomment to download graphs from google colab
 '''
@@ -202,9 +218,11 @@ def doTraining(x_train, y_train, x_test, y_test, param):
 
 if __name__=='__main__':
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    with tf.Session() as sess:
-        x_train = sess.run(tf.image.rgb_to_grayscale(x_train))
-        x_test = sess.run(tf.image.rgb_to_grayscale(x_test))
+    # with tf.Session() as sess:
+    #     x_train = sess.run(tf.image.rgb_to_grayscale(x_train))
+    #     x_test = sess.run(tf.image.rgb_to_grayscale(x_test))
+
+    x_train, x_test = preprocess(x_train), preprocess(x_test)
 
     y_train = to_categorical(y_train)
     y_test = to_categorical(y_test)
