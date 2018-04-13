@@ -11,6 +11,11 @@ matplotlib.use("TkAGG")
 from matplotlib import pyplot as plt
 
 '''
+Uncomment to download graphs from google colab
+'''
+# from google.colab import files
+
+'''
 Returns a model without adversarial dropout
 '''
 def modelWithRandD(x):
@@ -92,20 +97,29 @@ def Accuracy(logits, labels):
 
 
 def visualize(acc, loss, param):
-
     x = np.arange(0, len(acc) * param['STEPS'], param['STEPS'])
-    name = "Baseline" if param['baseline'] else "Adversarial"
+    name = "Baseline" if param['BASELINE'] else "Adversarial"
     plt.figure(1)
-    plt.title("Accuracy trend: " + name)
+    plt.title("Acc trend: " + name)
     plt.plot(x, acc)
+    filename = str("Accuracy_" + re.sub("{|}|:|'|,| ", "", str(param)) + ".png")
+    print(filename)
+    plt.savefig(filename)
 
-    plt.savefig("Accuracy_" + re.sub("{|}|:|'|,| ", "", param) + ".png")
+    # Uncomment line to download file on Google Colab
+    # files.download(filename)
 
     plt.figure(2)
     plt.title("Loss trend: " + name)
     plt.plot(x, loss)
+    filename = str("Loss_" + re.sub("{|}|:|'|,| ", "", str(param)) + ".png")
+    print(filename)
+    plt.savefig(filename)
 
-    plt.savefig("Loss_" + re.sub("{|}|:|'|,| ", "", param) + ".png")
+    # Uncomment line to download file on Google Colab
+    # files.download(filename)
+
+    plt.close('all')
 
 
 def doTraining(x_train, y_train, x_test, y_test, param):
@@ -113,9 +127,6 @@ def doTraining(x_train, y_train, x_test, y_test, param):
 
     batch_size = param['BATCH_SIZE']
     epochs = param['EPOCHS']
-
-    param_train = param
-    param_test = param
 
     STEPS = len(x_train) // batch_size if param['STEPS'] is None else param['STEPS']
     TEST_STEPS = len(x_test) // batch_size if param['STEPS'] is None else param['STEPS']
@@ -126,7 +137,8 @@ def doTraining(x_train, y_train, x_test, y_test, param):
     y_train_ph = tf.placeholder(tf.float32)
     y_test_ph = tf.placeholder(tf.float32)
 
-    train_op, loss, logit_rand = CreateBaseModel(x_train_ph, y_train_ph) if param['BASELINE'] else CreateAdDModel(x_train_ph, y_train_ph)
+    train_op, loss, logit_rand = CreateBaseModel(x_train_ph, y_train_ph) if param['BASELINE'] else CreateAdDModel(
+        x_train_ph, y_train_ph)
     logit_test, test_loss = createTestModel(x_test_ph, y_test_ph)
 
     # Accuracy Train
@@ -143,37 +155,47 @@ def doTraining(x_train, y_train, x_test, y_test, param):
     # Training
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        
+
         for epoch in range(epochs):
             # Train model
             acc_train, loss_train = 0, 0
             for i in range(STEPS):
-                _, loss, acc = sess.run([train_op, loss, accuracy_train], feed_dict={x_train_ph: x_train[batch_size * i : batch_size * (i + 1)], y_train_ph: y_train[batch_size * i : batch_size * (i + 1)]})
+                _, loss_, acc = sess.run([train_op, loss, accuracy_train],
+                                         feed_dict={x_train_ph: x_train[batch_size * i: batch_size * (i + 1)],
+                                                    y_train_ph: y_train[batch_size * i: batch_size * (i + 1)]})
                 acc_train += acc
-                loss_train += loss
+                loss_train += loss_
 
                 acc_train_trend.append(acc)
-                loss_train_trend.append(loss)
+                loss_train_trend.append(loss_)
 
             # Test model
             acc_test, loss_test = 0, 0
             for i in range(TEST_STEPS):
-                acc_t, loss_t = sess.run([accuracy_test, test_loss], feed_dict={x_test_ph: x_test[batch_size * i : batch_size * (i + 1)], y_test_ph: y_test[batch_size * i : batch_size * (i + 1)]})
+                acc_t, loss_t = sess.run([accuracy_test, test_loss],
+                                         feed_dict={x_test_ph: x_test[batch_size * i: batch_size * (i + 1)],
+                                                    y_test_ph: y_test[batch_size * i: batch_size * (i + 1)]})
                 acc_test += acc_t
                 loss_test += loss_t
 
                 acc_test_trend.append(acc_t)
                 loss_test_trend.append(loss_t)
 
+            print('Epoch: {} || Train Loss: {}, Train Acc: {} || Test Loss: {}, Test Accuracy: {}'.format(epoch,
+                                                                                                          loss_train / STEPS,
+                                                                                                          acc_train / STEPS,
+                                                                                                          loss_test / TEST_STEPS,
+                                                                                                          acc_test / TEST_STEPS))
+
     # Train
-    param_train['TYPE'] = 'train'
-    param_train['STEPS'] = STEPS
-    visualize(acc_train_trend, loss_train_trend, param_train)
+    param['TYPE'] = 'train'
+    param['STEPS'] = STEPS
+    visualize(acc_train_trend, loss_train_trend, param)
 
     # Test
-    param_test['TYPE'] = 'test'
-    param_test['STEPS'] = TEST_STEPS
-    visualize(acc_test_trend, loss_test_trend, param_test)
+    param['TYPE'] = 'test'
+    param['STEPS'] = TEST_STEPS
+    visualize(acc_test_trend, loss_test_trend, param)
 
     return acc_train_trend, loss_train_trend, acc_test_trend, loss_test_trend
 
@@ -183,13 +205,13 @@ if __name__=='__main__':
     with tf.Session() as sess:
         x_train = sess.run(tf.image.rgb_to_grayscale(x_train))
         x_test = sess.run(tf.image.rgb_to_grayscale(x_test))
-    
+
     y_train = to_categorical(y_train)
     y_test = to_categorical(y_test)
 
     param = {
         'BATCH_SIZE': 128,
-        'EPOCHS': 1,
+        'EPOCHS': 10,
         'STEPS': None,
         'BASELINE': False
     }
