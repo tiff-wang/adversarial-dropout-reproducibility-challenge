@@ -96,7 +96,7 @@ def CreateAdDModel(x, y, learning_rate=0.001, optimizer=tf.train.AdamOptimizer, 
     return train_op, loss, logit_rand
 
 
-def createTestModel(x, y):
+def CreateTestModel(x, y):
     with tf.variable_scope(tf.get_variable_scope(), reuse=True) as scope:
         logit_rand = modelWithRandD(x)
         logit_rand_loss = L.CrossEntropyWithLogits(logit_rand, y)
@@ -155,7 +155,7 @@ def doTraining(x_train, y_train, x_test, y_test, param):
 
     train_op, loss, logit_rand = CreateBaseModel(x_train_ph, y_train_ph) if param['BASELINE'] else CreateAdDModel(
         x_train_ph, y_train_ph)
-    logit_test, test_loss = createTestModel(x_test_ph, y_test_ph)
+    logit_test, test_loss = CreateTestModel(x_test_ph, y_test_ph)
 
     # Accuracy Train
     accuracy_train = Accuracy(logit_rand, y_train_ph)
