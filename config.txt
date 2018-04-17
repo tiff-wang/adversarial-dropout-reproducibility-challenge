@@ -1,6 +1,0 @@
-x_gray = tf.image.rgb_to_grayscale(x)
-Optimizer: Adam
-Lr: 0.001
-Batch size = 200
-Epochs = 10
-No shuffle
